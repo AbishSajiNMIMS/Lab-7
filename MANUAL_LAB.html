@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Full-Stack Code-Along</title>
+<link rel="stylesheet" href="_shared/manual.css">
+<style>
+  .part-divider { display:flex; align-items:center; gap:1rem; margin:4rem 0 1.5rem; }
+  .part-divider .num { width:2.4rem; height:2.4rem; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex:none; }
+  .part-divider h2 { margin:0; font-size:1.6rem; }
+  .part-divider p { margin:.15rem 0 0; color:var(--text-muted); font-size:.9rem; }
+</style>
+</head>
+<body>
+<input type="checkbox" id="theme-toggle" class="theme-toggle">
+<div class="page">
+
+  <header class="page-header">
+    <div class="page-header__text">
+      <p class="eyebrow">Full-Stack Code-Along · One Manual, One Project</p>
+      <h1>📋 TaskFlow — Build It End to End</h1>
+      <p class="subtitle">One project, one sitting: <strong>Git</strong> → <strong>Django</strong> (models, admin, views, templates — HTML, CSS and JS are taught right here, inside the templates you build) → <strong>Docker</strong>. Every code block is the complete, working file or the exact command to run — copy it in, it runs.</p>
+    </div>
+    <label for="theme-toggle" class="theme-switch">🌗 toggle theme</label>
+  </header>
+
+  <nav class="toc">
+    <a href="#part-1">1 · Git &amp; GitHub</a>
+    <a href="#part-2">2 · Django</a>
+    <a href="#part-3">3 · Docker</a>
+    <a href="#topics">🗂️ Topic map</a>
+  </nav>
+
+  <p class="intro">Reference while you work: <a href="../../Unitwise%20notes/IMAP_Coding_Reference_Manual.md">IMAP_Coding_Reference_Manual.md</a> (HTML/CSS/JS/Git syntax lookup). This manual doesn't re-explain syntax already in there — it gives you a reason to use it.</p>
+
+  <main>
+
+    <!-- ================= PART 1: GIT ================= -->
+    <div class="part-divider" id="part-1">
+      <div class="num">1</div>
+      <div><h2>Git &amp; GitHub</h2><p>Scaffold the Django project, put it under version control from commit one.</p></div>
+    </div>
+
+    <section id="p1-step-0" class="step">
+      <p class="step-label">Step 1.0</p>
+      <h2>Setup (once per machine)</h2>
+      <pre><code>git config --global user.name "Your Name"
+git config --global user.email "you@example.com"</code></pre>
+    </section>
+
+    <section id="p1-step-1" class="step">
+      <p class="step-label">Step 1.1</p>
+      <h2>Scaffold the project and commit it</h2>
+      <pre><code>mkdir taskflow-backend && cd taskflow-backend
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
+pip install django
+
+django-admin startproject taskflow .
+python manage.py startapp tasks</code></pre>
+      <p>Before anything else, add a <code>.gitignore</code> — a venv and a database file should never end up in version control:</p>
+      <pre><code># .gitignore
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+.DS_Store</code></pre>
+      <pre><code>git init
+git status
+git add .
+git commit -m "Initial Django project scaffold"
+git log --oneline</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> one commit, and <code>git status</code> shows nothing untracked — <code>venv/</code> and <code>db.sqlite3</code> are correctly ignored.</div>
+    </section>
+
+    <section id="p1-step-2" class="step">
+      <p class="step-label">Step 1.2</p>
+      <h2>Branching, in isolation, before you need it</h2>
+      <p class="intro">Practice the mechanics once on something trivial, so it's muscle memory by the time Part 2 uses it for real. Add a one-line <code>README.md</code> on a branch:</p>
+      <pre><code>git switch -c docs/readme</code></pre>
+      <pre><code># TaskFlow
+
+A task tracker built end to end: Django backend, Docker deployment.</code></pre>
+      <pre><code>git add README.md
+git commit -m "Add README"
+git switch main
+git merge docs/readme
+git log --oneline --graph</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> <code>main</code> now has the README, and the graph shows a clean, fast-forward merge — no conflict, because nothing else changed <code>main</code> in the meantime.</div>
+      <div class="callout"><p>You'll do this exact sequence — <code>switch -c</code>, edit, <code>add</code>, <code>commit</code>, <code>switch main</code>, <code>merge</code> — repeatedly through Part 2 as real features land. A <strong>real merge conflict</strong> (two branches editing the same line) is coming in Step 2.9, once there's an actual UI to fight over.</p></div>
+    </section>
+
+    <section id="p1-step-3" class="step">
+      <p class="step-label">Step 1.3</p>
+      <h2>Push to GitHub</h2>
+      <ol>
+        <li>Create a new <strong>empty</strong> repo on github.com (no README/<code>.gitignore</code> — you already have local history).</li>
+        <li>
+<pre><code>git remote add origin https://github.com/YOUR-USERNAME/taskflow.git
+git push -u origin main</code></pre>
+        </li>
+      </ol>
+      <div class="checkpoint"><strong>Checkpoint:</strong> your commits are visible on GitHub. Keep this terminal open — every step in Part 2 ends with a commit here.</div>
+      <div class="callout">
+        <p><strong>Golden rules:</strong> stage before you commit — <code>git commit</code> before <code>git add</code> commits nothing. Never force-push a shared branch — use <code>git revert &lt;id&gt;</code> to undo a shared mistake, not <code>git reset</code>. Small, focused, present-tense commits.</p>
+      </div>
+    </section>
+
+    <!-- ================= PART 2: DJANGO ================= -->
+    <div class="part-divider" id="part-2">
+      <div class="num">2</div>
+      <div><h2>Django</h2><p>The whole app — backend AND the HTML/CSS/JS frontend, built as Django templates.</p></div>
+    </div>
+
+    <section id="p2-step-1" class="step">
+      <p class="step-label">Step 2.1</p>
+      <h2>Settings</h2>
+      <p class="intro">Three spots in <code>taskflow/settings.py</code> change — everything else stays default:</p>
+      <pre><code>INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "tasks",
+]</code></pre>
+      <pre><code>TEMPLATES = [
+    {
+        ...
+        "DIRS": [BASE_DIR / "templates"],
+        ...
+    },
+]</code></pre>
+      <pre><code>LOGIN_REDIRECT_URL = "task_list"
+LOGOUT_REDIRECT_URL = "login"</code></pre>
+      <p class="intro"><code>LOGIN_REDIRECT_URL</code> is where Django's built-in <code>LoginView</code> sends you after a successful login; <code>LOGOUT_REDIRECT_URL</code> is where <code>django.contrib.auth.urls</code>'s <code>logout</code> view sends you after logging out.</p>
+      <pre><code>git add taskflow/settings.py
+git commit -m "Register tasks app, set templates dir and auth redirects"</code></pre>
+    </section>
+
+    <section id="p2-step-2" class="step">
+      <p class="step-label">Step 2.2</p>
+      <h2>The model</h2>
+      <p class="intro">In <code>tasks/models.py</code>:</p>
+      <pre><code>from django.db import models
+from django.contrib.auth.models import User
+
+class Task(models.Model):
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    priority = models.CharField(max_length=6, choices=PRIORITY_CHOICES, default="medium")
+    due_date = models.DateField(null=True, blank=True)
+    done = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title</code></pre>
+      <p class="intro"><code>on_delete=models.CASCADE</code>: deleting a user deletes their tasks too. <code>choices=</code> is how a dropdown's valid values get enforced server-side, not just offered client-side.</p>
+      <pre><code>python manage.py makemigrations
+python manage.py migrate</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> <code>makemigrations</code> prints <code>Create model Task</code>; <code>migrate</code> applies it with no errors.</div>
+      <pre><code>git add tasks/models.py tasks/migrations/
+git commit -m "Add Task model with priority and due date"</code></pre>
+    </section>
+
+    <section id="p2-step-3" class="step">
+      <p class="step-label">Step 2.3</p>
+      <h2>Admin site</h2>
+      <p class="intro">In <code>tasks/admin.py</code>:</p>
+      <pre><code>from django.contrib import admin
+from .models import Task
+
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ("title", "owner", "priority", "due_date", "done", "created_at")
+    list_filter = ("done", "priority")</code></pre>
+      <pre><code>python manage.py createsuperuser
+python manage.py runserver</code></pre>
+      <p class="intro">Visit <code>127.0.0.1:8000/admin</code>, log in, add two or three tasks by hand.</p>
+      <div class="checkpoint"><strong>Checkpoint:</strong> the admin list view shows your tasks, and the <code>done</code>/<code>priority</code> filters work.</div>
+      <pre><code>git add tasks/admin.py
+git commit -m "Register Task in the admin site"</code></pre>
+    </section>
+
+    <section id="p2-step-4" class="step">
+      <p class="step-label">Step 2.4</p>
+      <h2>Views (function-based)</h2>
+      <p class="intro">In <code>tasks/views.py</code>:</p>
+      <pre><code>from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Task
+
+@login_required
+def task_list(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        priority = request.POST.get("priority", "medium")
+        due_date = request.POST.get("due_date") or None
+        if title:
+            Task.objects.create(owner=request.user, title=title, priority=priority, due_date=due_date)
+        return redirect("task_list")
+
+    tasks = Task.objects.filter(owner=request.user).order_by("-created_at")
+    return render(request, "tasks/task_list.html", {"tasks": tasks})
+
+@login_required
+def toggle_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, owner=request.user)
+    task.done = not task.done
+    task.save()
+    return redirect("task_list")
+
+@login_required
+def delete_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, owner=request.user)
+    task.delete()
+    return redirect("task_list")</code></pre>
+      <p class="intro"><code>@login_required</code> sends anonymous visitors to the login page. <code>get_object_or_404(..., owner=request.user)</code> stops one logged-in user from toggling or deleting another user's task by guessing an ID in the URL — every query and every create is scoped to <code>request.user</code>, never trust an ID alone.</p>
+      <pre><code>git add tasks/views.py
+git commit -m "Add task_list, toggle_task, delete_task views"</code></pre>
+    </section>
+
+    <section id="p2-step-5" class="step">
+      <p class="step-label">Step 2.5</p>
+      <h2>URLs</h2>
+      <p><code>tasks/urls.py</code> (new file):</p>
+      <pre><code>from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+    path("&lt;int:task_id&gt;/toggle/", views.toggle_task, name="toggle_task"),
+    path("&lt;int:task_id&gt;/delete/", views.delete_task, name="delete_task"),
+]</code></pre>
+      <p><code>taskflow/urls.py</code>:</p>
+      <pre><code>from django.contrib import admin
+from django.urls import path, include
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("accounts/login/", auth_views.LoginView.as_view(template_name="login.html"), name="login"),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path("", include("tasks.urls")),
+]</code></pre>
+      <p class="intro"><code>django.contrib.auth.urls</code> gives you <code>logout</code>, password-change, and password-reset views for free — no view code needed for any of those.</p>
+      <pre><code>git add tasks/urls.py taskflow/urls.py
+git commit -m "Wire up task and auth URLs"</code></pre>
+    </section>
+
+    <section id="p2-step-6" class="step">
+      <p class="step-label">Step 2.6</p>
+      <h2>Templates — this is your HTML</h2>
+      <p class="intro">Create a project-level <code>templates/login.html</code>:</p>
+      <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;Log in — TaskFlow&lt;/title&gt;
+  {% load static %}
+  &lt;link rel="stylesheet" href="{% static 'tasks/style.css' %}"&gt;
+&lt;/head&gt;
+&lt;body class="app"&gt;
+  &lt;h1&gt;📋 Log in to TaskFlow&lt;/h1&gt;
+  &lt;form method="post" id="add-form"&gt;
+    {% csrf_token %}
+    {{ form.as_p }}
+    &lt;button type="submit" class="btn"&gt;Log in&lt;/button&gt;
+  &lt;/form&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p class="intro">And <code>tasks/templates/tasks/task_list.html</code> — semantic <code>&lt;header&gt;</code>/<code>&lt;form&gt;</code>, a <code>&lt;select&gt;</code> for priority, a real <code>&lt;ul&gt;</code> for the list, all server-rendered:</p>
+      <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;TaskFlow&lt;/title&gt;
+  {% load static %}
+  &lt;link rel="stylesheet" href="{% static 'tasks/style.css' %}"&gt;
+&lt;/head&gt;
+&lt;body class="app"&gt;
+  &lt;header class="app-header"&gt;
+    &lt;h1&gt;📋 TaskFlow — {{ user.username }}&lt;/h1&gt;
+    &lt;div&gt;
+      &lt;button id="theme-btn" type="button"&gt;🌙 Dark mode&lt;/button&gt;
+      &lt;form method="post" action="{% url 'logout' %}" style="display:contents"&gt;
+        {% csrf_token %}
+        &lt;button type="submit" class="btn"&gt;Log out&lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;form method="post" id="add-form"&gt;
+    {% csrf_token %}
+    &lt;input type="text" name="title" id="task-input" placeholder="Add a task..." required&gt;
+    &lt;select name="priority" id="priority-select"&gt;
+      &lt;option value="low"&gt;Low&lt;/option&gt;
+      &lt;option value="medium" selected&gt;Medium&lt;/option&gt;
+      &lt;option value="high"&gt;High&lt;/option&gt;
+    &lt;/select&gt;
+    &lt;input type="date" name="due_date"&gt;
+    &lt;button type="submit" class="btn"&gt;Add&lt;/button&gt;
+  &lt;/form&gt;
+
+  &lt;ul id="task-list"&gt;
+    {% for task in tasks %}
+      &lt;li data-done="{{ task.done|yesno:'true,false' }}"&gt;
+        &lt;form method="post" action="{% url 'toggle_task' task.id %}" style="display:contents"&gt;
+          {% csrf_token %}
+          &lt;button type="submit" class="task-check" data-done="{{ task.done|yesno:'true,false' }}"&gt;{% if task.done %}✓{% endif %}&lt;/button&gt;
+        &lt;/form&gt;
+        &lt;span class="task-title"&gt;{{ task.title }}{% if task.due_date %} &amp;mdash; due {{ task.due_date }}{% endif %}&lt;/span&gt;
+        &lt;span class="badge" data-priority="{{ task.priority }}"&gt;{{ task.priority }}&lt;/span&gt;
+        &lt;form method="post" action="{% url 'delete_task' task.id %}" style="display:contents"&gt;
+          {% csrf_token %}
+          &lt;button type="submit" class="delete-btn"&gt;✕&lt;/button&gt;
+        &lt;/form&gt;
+      &lt;/li&gt;
+    {% empty %}
+      &lt;li id="empty-state"&gt;No tasks yet — add one above.&lt;/li&gt;
+    {% endfor %}
+  &lt;/ul&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p class="intro"><code>{% csrf_token %}</code> is not optional — Django rejects any POST form without it. <code>{% url 'name' %}</code> resolves a URL by the <code>name=</code> given to <code>path()</code>, so if a route changes, the template doesn't have to. <code>{{ task.title }}</code> is auto-escaped by default — a task titled <code>&lt;img src=x onerror=alert(1)&gt;</code> renders as harmless text, not code.</p>
+      <div class="checkpoint"><strong>Checkpoint:</strong> <code>python manage.py runserver</code>, log in at <code>/accounts/login/</code>, land on an unstyled but fully working task list — add, toggle, delete all work via real page reloads.</div>
+      <pre><code>git add templates/ tasks/templates/
+git commit -m "Add login and task list templates"</code></pre>
+    </section>
+
+    <section id="p2-step-7" class="step">
+      <p class="step-label">Step 2.7</p>
+      <h2>Styling — this is your CSS</h2>
+      <p class="intro">Create <code>tasks/static/tasks/style.css</code>. This one file covers the CSS fundamentals: custom properties as design tokens, the box model, flexbox, attribute selectors, and a <code>@media</code> breakpoint.</p>
+      <pre><code>*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --text:#37352f; --text-muted:#787774;
+  --bg:#ffffff; --bg-soft:#f7f6f3; --border:#ebebea;
+  --accent:#4d96ff; --accent-soft:#eaf2ff;
+  --danger:#e5534b; --success:#4dd4ac; --warn:#ffa62b;
+  --radius:8px; --radius-lg:16px;
+}
+[data-theme="dark"] {
+  --text:#e9e9e7; --text-muted:#a3a29e; --bg:#17171a; --bg-soft:#232327; --border:#38383d; --accent-soft:#1d2a45;
+}
+
+body { margin:0; background:var(--bg-soft); color:var(--text); font-family:-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif; line-height:1.5; }
+.app { max-width:640px; margin:0 auto; padding:2rem 1.25rem 5rem; }
+
+header.app-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
+header.app-header h1 { font-size:1.5rem; margin:0; }
+.task-count { font-size:.85rem; color:var(--text-muted); font-weight:400; }
+#theme-btn { background:var(--bg); border:1px solid var(--border); border-radius:999px; padding:.4rem .9rem; font-size:.85rem; cursor:pointer; color:var(--text); }
+#theme-btn:hover { border-color:var(--accent); }
+
+form#add-form { display:flex; gap:.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+#task-input { flex:1 1 200px; padding:.6rem .8rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); font-size:.95rem; }
+#priority-select, input[type="date"] { padding:.6rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); }
+button.btn, .btn { background:var(--accent); color:#fff; border:none; border-radius:var(--radius); padding:.6rem 1.1rem; font-weight:600; cursor:pointer; font-size:.9rem; }
+button.btn:hover, .btn:hover { opacity:.9; }
+
+ul#task-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.5rem; }
+ul#task-list li {
+  display:flex; align-items:center; gap:.6rem;
+  background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
+  padding:.7rem .9rem;
+}
+
+.task-check { width:20px; height:20px; border-radius:50%; border:2px solid var(--border); background:none; cursor:pointer; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:.7rem; padding:0; }
+.task-check[data-done="true"] { background:var(--success); border-color:var(--success); }
+
+.task-title { flex:1; font-size:.9rem; word-break:break-word; }
+li[data-done="true"] .task-title { text-decoration:line-through; color:var(--text-muted); }
+
+.badge { font-size:.7rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; }
+.badge[data-priority="high"] { background:#fde3e1; color:var(--danger); }
+.badge[data-priority="medium"] { background:#fff2df; color:#a6650f; }
+.badge[data-priority="low"] { background:#e6f9f2; color:#1f8f6b; }
+
+.delete-btn { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem; padding:.2rem .4rem; border-radius:4px; }
+.delete-btn:hover { color:var(--danger); background:var(--bg-soft); }
+
+#empty-state { text-align:center; color:var(--text-muted); padding:2.5rem 1rem; font-size:.9rem; list-style:none; }
+
+@media (max-width:420px) {
+  form#add-form { flex-direction:column; }
+}</code></pre>
+      <p class="intro">Every colour reads from a <code>var(--...)</code> custom property, never a hard-coded hex — that's what makes <code>[data-theme="dark"]</code> able to re-skin the whole page by overriding six variables in Step 2.8. <code>display:flex</code> lines up the checkbox / title / badge / delete button on one axis without manual positioning. The <code>.badge[data-priority="high"]</code> attribute selector is how one class renders three different colours depending on a data attribute Django fills in.</p>
+      <div class="checkpoint"><strong>Checkpoint:</strong> refresh — the app is fully styled, form lays out in a row, task rows are cards, priority badges are coloured.</div>
+      <pre><code>git add tasks/static/
+git commit -m "Style TaskFlow: design tokens, box model, flexbox"</code></pre>
+    </section>
+
+    <section id="p2-step-8" class="step">
+      <p class="step-label">Step 2.8</p>
+      <h2>JavaScript — dark mode toggle</h2>
+      <p class="intro">Everything else in this app is server-rendered on purpose (Step 2.4's callout explains why), but a theme preference belongs to the browser, not the database — a good, honest reason to reach for a little vanilla JS instead of a round trip to Django. This covers the DOM, event listeners, and <code>localStorage</code> in one small, real example.</p>
+      <p class="intro">Add the button to the header in <code>task_list.html</code>:</p>
+      <pre><code>&lt;header class="app-header"&gt;
+  &lt;h1&gt;📋 TaskFlow — {{ user.username }}&lt;/h1&gt;
+  &lt;div&gt;
+    &lt;button id="theme-btn" type="button"&gt;🌙 Dark mode&lt;/button&gt;
+    &lt;form method="post" action="{% url 'logout' %}" style="display:contents"&gt;
+      {% csrf_token %}
+      &lt;button type="submit" class="btn"&gt;Log out&lt;/button&gt;
+    &lt;/form&gt;
+  &lt;/div&gt;
+&lt;/header&gt;</code></pre>
+      <p class="intro">Then add this <code>&lt;script&gt;</code> just before <code>&lt;/body&gt;&gt;</code>:</p>
+      <pre><code>&lt;script&gt;
+  const themeBtn = document.getElementById("theme-btn");
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    themeBtn.textContent = theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
+    localStorage.setItem("taskflow.theme", theme);
+  }
+  themeBtn.addEventListener("click", () =&gt; {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
+  applyTheme(localStorage.getItem("taskflow.theme") || "light");
+&lt;/script&gt;</code></pre>
+      <p class="intro"><code>document.documentElement</code> is the <code>&lt;html&gt;</code> tag — setting <code>.dataset.theme</code> on it sets <code>data-theme="dark"</code>, which is exactly the attribute selector the CSS in Step 2.7 is waiting for. <code>localStorage</code> persists the choice per-browser, so it survives a refresh even though nothing was saved to the database.</p>
+      <div class="checkpoint"><strong>Checkpoint:</strong> click the button — the whole page re-skins instantly, no page reload. Refresh the page — it's still dark.</div>
+      <pre><code>git add tasks/templates/
+git commit -m "Add dark mode toggle"
+git push</code></pre>
+    </section>
+
+    <section id="p2-step-9" class="step">
+      <p class="step-label">Step 2.9</p>
+      <h2>A real feature branch, then a real merge conflict</h2>
+      <p class="intro">First, a feature that merges cleanly — a "Clear completed" button. In <code>tasks/views.py</code>, add:</p>
+      <pre><code>git switch -c feature/clear-completed</code></pre>
+      <pre><code>@login_required
+def clear_completed(request):
+    Task.objects.filter(owner=request.user, done=True).delete()
+    return redirect("task_list")</code></pre>
+      <p>In <code>tasks/urls.py</code>, add one line to <code>urlpatterns</code>:</p>
+      <pre><code>path("clear-completed/", views.clear_completed, name="clear_completed"),</code></pre>
+      <p>In <code>task_list.html</code>, under the add-task form:</p>
+      <pre><code>&lt;form method="post" action="{% url 'clear_completed' %}"&gt;
+  {% csrf_token %}
+  &lt;button type="submit" class="btn" style="background:var(--text-muted)"&gt;Clear completed&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+      <pre><code>git add tasks/views.py tasks/urls.py tasks/templates/
+git commit -m "Add clear completed button"
+git switch main
+git merge feature/clear-completed</code></pre>
+      <p class="intro">Clean merge — nothing else touched these files. Now two features that <em>do</em> collide, on separate branches, both editing the same <code>&lt;h1&gt;</code> — the scenario that actually produces conflicts on a real team:</p>
+      <pre><code>git switch -c feature/task-count-header</code></pre>
+      <p>Change the header in <code>task_list.html</code> to show a live count:</p>
+      <pre><code>&lt;h1&gt;📋 TaskFlow — {{ user.username }} &lt;span class="task-count"&gt;({{ tasks|length }} total)&lt;/span&gt;&lt;/h1&gt;</code></pre>
+      <pre><code>git add tasks/templates/
+git commit -m "Show live task count in header"
+git switch main
+git switch -c feature/header-copy</code></pre>
+      <p>On this second branch, change the same line's wording instead:</p>
+      <pre><code>&lt;h1&gt;✅ TaskFlow — Stay on top of it&lt;/h1&gt;</code></pre>
+      <pre><code>git add tasks/templates/
+git commit -m "Update app header copy"
+git switch main
+git merge feature/task-count-header    # merges cleanly
+git merge feature/header-copy</code></pre>
+      <p class="intro">Both branches touched the same line, so Git stops:</p>
+      <pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD (main)
+&lt;h1&gt;📋 TaskFlow — {{ user.username }} &lt;span class="task-count"&gt;({{ tasks|length }} total)&lt;/span&gt;&lt;/h1&gt;
+=======
+&lt;h1&gt;✅ TaskFlow — Stay on top of it&lt;/h1&gt;
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/header-copy</code></pre>
+      <p><strong>Resolve it by hand</strong> — keep both changes:</p>
+      <pre><code>&lt;h1&gt;✅ TaskFlow — Stay on top of it &lt;span class="task-count"&gt;({{ tasks|length }} total)&lt;/span&gt;&lt;/h1&gt;</code></pre>
+      <p>Delete the <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>/<code>=======</code>/<code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> marker lines, save:</p>
+      <pre><code>git add tasks/templates/
+git commit -m "Merge feature/header-copy, keep live task count + new copy"
+git log --oneline --graph
+git push</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> the graph shows both feature branches joining <code>main</code>; the running app shows the new header text <em>and</em> a live task count.</div>
+    </section>
+
+    <section id="p2-step-10" class="step">
+      <p class="step-label">Step 2.10</p>
+      <h2>A real pull request</h2>
+      <p class="intro">Pair up, or use a second GitHub account:</p>
+      <ol>
+        <li>Partner clones: <code>git clone https://github.com/YOUR-USERNAME/taskflow.git</code></li>
+        <li>They branch: <code>git switch -c feature/priority-filter</code></li>
+        <li>They add four filter buttons (All / Low / Medium / High) that filter the queryset in <code>task_list</code> by <code>request.GET.get("priority")</code>, and commit it.</li>
+        <li>They push their branch (not <code>main</code>): <code>git push -u origin feature/priority-filter</code></li>
+        <li>On GitHub, they open a Pull Request against your <code>main</code>.</li>
+        <li>You review the diff, comment, then merge it on GitHub.</li>
+      </ol>
+      <div class="checkpoint"><strong>Checkpoint:</strong> <code>git pull</code> locally and see a feature you didn't write, in the same app you built.</div>
+      <p class="intro">Full working code for everything above: <a href="django/reference-solution/">django/reference-solution/</a>.</p>
+    </section>
+
+    <!-- ================= PART 3: DOCKER ================= -->
+    <div class="part-divider" id="part-3">
+      <div class="num">3</div>
+      <div><h2>Docker</h2><p>Containerise the Django app from Part 2.</p></div>
+    </div>
+
+    <section id="p3-level-0" class="step">
+      <p class="step-label">Level 3.0</p>
+      <h2>Sanity check Docker itself</h2>
+      <pre><code>docker run -d -p 8080:80 nginx:alpine</code></pre>
+      <p class="intro">Open <code>http://localhost:8080</code> for the nginx welcome page, then clean up:</p>
+      <pre><code>docker ps
+docker rm -f &lt;container-id-or-name&gt;</code></pre>
+    </section>
+
+    <section id="p3-level-1" class="step">
+      <p class="step-label">Level 3.1</p>
+      <h2><code>requirements.txt</code> and a Dockerfile</h2>
+      <p class="intro">From inside <code>taskflow-backend/</code> (the folder with <code>manage.py</code>):</p>
+      <pre><code>pip freeze &gt; requirements.txt</code></pre>
+      <pre><code>FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]</code></pre>
+      <div class="callout">
+        <p><strong>Read the order before you type it:</strong> <code>requirements.txt</code> is copied and installed <em>before</em> the rest of the code. That's deliberate layer ordering — editing a <code>.py</code> file later and rebuilding reuses the cached <code>pip install</code> layer instead of reinstalling everything. Reverse the two <code>COPY</code> lines and every rebuild gets slow.</p>
+      </div>
+      <p class="intro"><code>CMD</code> is the default command — anyone running <code>docker run</code> can override it. <code>ENTRYPOINT</code> would pin the image to always run as one program no matter what.</p>
+      <pre><code># .dockerignore
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+.git/</code></pre>
+      <pre><code>docker build -t taskflow:v1 .
+docker run -d -p 8000:8000 --name taskflow-app taskflow:v1</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> <code>http://localhost:8000</code> serves the app — this is <code>runserver</code> running inside a container, not on your machine directly.</div>
+    </section>
+
+    <section id="p3-level-2" class="step">
+      <p class="step-label">Level 3.2</p>
+      <h2>Migrations and persistence</h2>
+      <pre><code>docker exec -it taskflow-app python manage.py migrate
+docker exec -it taskflow-app python manage.py createsuperuser</code></pre>
+      <p class="intro">Right now, <code>docker rm -f taskflow-app</code> deletes the database forever — it only lived in the dead container's writable layer. Fix that with a named volume:</p>
+      <pre><code>docker rm -f taskflow-app
+docker run -d -p 8000:8000 -v taskflow-data:/app --name taskflow-app taskflow:v1
+docker exec -it taskflow-app python manage.py migrate</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> add a task, <code>docker rm -f taskflow-app</code>, re-run the same <code>-v taskflow-data:/app</code> command — the task is still there.</div>
+    </section>
+
+    <section id="p3-level-3" class="step">
+      <p class="step-label">Level 3.3</p>
+      <h2>Postgres via Docker Compose</h2>
+      <p class="intro">A single container is fine for one service; two services (web + database) that need to talk to each other is what Compose is for.</p>
+      <pre><code>pip install "psycopg[binary]"
+pip freeze &gt; requirements.txt</code></pre>
+      <p>In <code>taskflow/settings.py</code>:</p>
+      <pre><code>import os
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "taskflow"),
+        "USER": os.environ.get("POSTGRES_USER", "taskflow"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "taskflow"),
+        "HOST": os.environ.get("POSTGRES_HOST", "db"),
+        "PORT": "5432",
+    }
+}</code></pre>
+      <p class="intro"><code>HOST</code> defaults to <code>"db"</code> — inside a Compose network, containers reach each other by <strong>service name</strong>, never <code>localhost</code>.</p>
+      <pre><code># .env — add to .gitignore and .dockerignore, never commit real credentials
+POSTGRES_DB=taskflow
+POSTGRES_USER=taskflow
+POSTGRES_PASSWORD=changeme</code></pre>
+      <pre><code># compose.yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+volumes:
+  pgdata:</code></pre>
+      <div class="callout"><p><code>depends_on: condition: service_healthy</code> — without the <code>healthcheck</code>, <code>depends_on</code> only waits for the <code>db</code> container to <em>start</em>, not for Postgres to be ready, and the first migration would race it and fail.</p></div>
+      <pre><code>docker compose up --build</code></pre>
+      <pre><code>docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser</code></pre>
+      <div class="checkpoint"><strong>Checkpoint:</strong> <code>docker compose down</code> then <code>docker compose up</code> again (no <code>-v</code>) — tasks and superuser survive, since they live in the <code>pgdata</code> volume, not either container.</div>
+      <pre><code>docker compose down -v   # full teardown</code></pre>
+      <pre><code>git add .
+git commit -m "Containerise TaskFlow: Dockerfile, compose, Postgres"
+git push</code></pre>
+    </section>
+
+    <section id="p3-explain" class="step">
+      <p class="step-label">Explain it</p>
+      <h2>🧠 What you should be able to explain afterward</h2>
+      <ul class="checklist">
+        <li>The difference between an <strong>image</strong> (the recipe) and a <strong>container</strong> (a running instance of it)</li>
+        <li>Why <code>COPY requirements.txt .</code> happens before <code>COPY . .</code></li>
+        <li>Why a volume, not the container's own filesystem, is what makes data survive <code>docker rm</code></li>
+        <li>Why services in Compose talk to each other by service name, never <code>localhost</code></li>
+        <li>Why <code>.env</code> never gets committed, and where the values end up at runtime</li>
+      </ul>
+      <p class="intro">Reference / worked example with more levels (multi-stage builds, non-root user, nginx + scaled web, CI): <a href="../../IMAP%20Lec%206/docker-lab/">IMAP Lec 6/docker-lab/</a>. Full config here: <a href="docker/reference-solution/">docker/reference-solution/</a>.</p>
+    </section>
+
+    <!-- ================= TOPIC MAP ================= -->
+    <section id="topics" class="step">
+      <p class="step-label">Coverage</p>
+      <h2>🗂️ Topic map</h2>
+      <ul class="checklist">
+        <li><strong>Git/GitHub</strong> — init/add/commit, feature branches, a real merge conflict, <code>.gitignore</code>, remotes, pull requests</li>
+        <li><strong>HTML</strong> — semantic layout (<code>header</code>/<code>form</code>/<code>ul</code>), forms, Django template tags, accessible labels — all inside real templates, not a standalone page</li>
+        <li><strong>CSS</strong> — custom properties/design tokens, the box model, flexbox, attribute selectors (<code>[data-priority]</code>), <code>@media</code>, dark mode via a data attribute</li>
+        <li><strong>JavaScript</strong> — the DOM (<code>document.documentElement</code>), <code>addEventListener</code>, <code>localStorage</code> — a small, real, deliberately scoped example rather than the whole app's logic</li>
+        <li><strong>Django</strong> — models &amp; migrations, admin site, function-based views, URL routing, templates, auto-escaping, authentication, static files</li>
+        <li><strong>Docker</strong> — Dockerfile layer ordering, <code>CMD</code> vs <code>ENTRYPOINT</code>, <code>.dockerignore</code>, named volumes, Docker Compose with Postgres</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer class="page-footer">
+    <hr>
+    <p>&copy; 2026 TaskFlow Code-Along · one project, top to bottom.</p>
+  </footer>
+
+</div>
+</body>
+</html>
